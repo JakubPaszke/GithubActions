@@ -12,7 +12,16 @@ epochs = int(sys.argv[1]) if len(sys.argv) > 1 else 10
 learning_rate = float(sys.argv[2]) if len(sys.argv) > 2 else 0.01
 
 # ----- Wczytaj dane -----
-train = pd.read_csv('train/train.tsv', sep='\t', header=None, names=['label', 'text'])
+def custom_reader(row):
+    parts = row.strip().split('\t')
+    label = parts[0]
+    text = '\t'.join(parts[1:])
+    return label, text
+
+with open('train/train.tsv', encoding='utf-8') as f:
+    data = [custom_reader(line) for line in f if line.strip()]
+
+train = pd.DataFrame(data, columns=['label', 'text'])
 
 # ----- Wczytaj embeddings -----
 w2v_model = KeyedVectors.load('word2vec_polish.bin')
