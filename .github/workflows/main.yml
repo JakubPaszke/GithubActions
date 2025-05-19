@@ -33,7 +33,6 @@ jobs:
         run: |
           git clone https://git.wmi.amu.edu.pl/kubapok/sport-text-classification-ball-ISI-public.git
           mv sport-text-classification-ball-ISI-public/* .
-          mv sport-text-classification-ball-ISI-public/.[!.]* .
           rm -rf sport-text-classification-ball-ISI-public
 
       - name: Unpack train.tsv.gz
