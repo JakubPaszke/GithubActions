@@ -4,17 +4,15 @@ import numpy as np
 import torch
 import torch.nn as nn
 from gensim.models import KeyedVectors
-import pickle
 
 # ----- Wczytaj dane -----
 test = pd.read_csv('dev-0/in.tsv', sep='\t', header=None, names=['text'])
-test_labels = pd.read_csv('dev-0/expected.tsv', sep='\t', header=None, names=['label'])['label'].values
+test_results = pd.read_csv('dev-0/expected.tsv', sep='\t', header=None, names=['label'])
 
 # ----- Wczytaj embeddings -----
 w2v_model = KeyedVectors.load('word2vec_100_3_polish.bin')
 vector_size = w2v_model.vector_size
 
-# ----- Funkcje pomocnicze -----
 def clean_text(text):
     text = str(text).lower()
     text = re.sub(r'[^a-ząćęłńóśźż ]', '', text)
@@ -28,17 +26,15 @@ def text_to_vec(text, model, vector_size):
     return np.mean(vectors, axis=0)
 
 # ----- Przygotuj dane -----
-X_test = np.vstack([text_to_vec(t, w2v_model, vector_size) for t in test['text']])
+X_test = np.array([text_to_vec(t, w2v_model, vector_size) for t in test['text']])
+y_test = test_results['label'].values
 
-# ----- Wczytaj mapping etykiet -----
-with open("label2idx.pkl", "rb") as f:
-    class_to_idx = pickle.load(f)
-idx_to_class = {v: k for k, v in class_to_idx.items()}
+# Jeżeli y_test są stringami, spróbuj zamienić je na liczby
+try:
+    y_test = y_test.astype(int)
+except:
+    pass  # zostaw jak jest
 
-# Zamień test labels na liczby
-y_true = np.array([class_to_idx[label] for label in test_labels], dtype=np.int64)
-
-# ----- Klasa modelu -----
 class SimpleClassifier(nn.Module):
     def __init__(self, input_size, num_classes):
         super().__init__()
@@ -46,7 +42,8 @@ class SimpleClassifier(nn.Module):
     def forward(self, x):
         return self.fc(x)
 
-num_classes = len(class_to_idx)
+# Ustal liczbę klas na podstawie y_test (lub hardkoduj jak chcesz)
+num_classes = len(set(y_test))
 model = SimpleClassifier(vector_size, num_classes)
 model.load_state_dict(torch.load("model.pth"))
 model.eval()
@@ -56,10 +53,5 @@ with torch.no_grad():
     outputs = model(inputs)
     preds = torch.argmax(outputs, dim=1).numpy()
 
-# ----- Ewaluacja -----
-accuracy = np.mean(preds == y_true)
+accuracy = np.mean(preds == y_test)
 print(f"Accuracy on dev-0: {accuracy:.4f}")
-
-# (opcjonalnie) Wyświetl przykładowe predykcje
-for i in range(3):
-    print(f"True: {idx_to_class[y_true[i]]}, Pred: {idx_to_class[preds[i]]}")
