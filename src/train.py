@@ -24,7 +24,7 @@ with open('train/train.tsv', encoding='utf-8') as f:
 train = pd.DataFrame(data, columns=['label', 'text'])
 
 # ----- Wczytaj embeddings -----
-w2v_model = KeyedVectors.load('word2vec_polish.bin')
+w2v_model = KeyedVectors.load('word2vec_100_3_polish.bin')
 vector_size = w2v_model.vector_size
 
 # ----- Funkcje pomocnicze -----
