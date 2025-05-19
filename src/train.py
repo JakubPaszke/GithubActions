@@ -6,8 +6,9 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from gensim.models import KeyedVectors
 import sys
+import pickle
 
-# Parametry przekazywane z workflow
+# Parametry z workflow
 epochs = int(sys.argv[1]) if len(sys.argv) > 1 else 10
 learning_rate = float(sys.argv[2]) if len(sys.argv) > 2 else 0.01
 
@@ -42,7 +43,16 @@ def text_to_vec(text, model, vector_size):
 
 # ----- Przygotuj dane do trenowania -----
 X = np.vstack([text_to_vec(t, w2v_model, vector_size) for t in train['text']])
-y = train['label'].values
+y_raw = train['label'].values
+
+# ----- Zamień etykiety na liczby -----
+classes = sorted(np.unique(y_raw))
+class_to_idx = {c: i for i, c in enumerate(classes)}
+y = np.array([class_to_idx[label] for label in y_raw], dtype=np.int64)
+
+# Zapisz mapping etykiet
+with open("label2idx.pkl", "wb") as f:
+    pickle.dump(class_to_idx, f)
 
 # ----- Dataset + DataLoader -----
 class TextDataset(Dataset):
@@ -65,7 +75,7 @@ class SimpleClassifier(nn.Module):
     def forward(self, x):
         return self.fc(x)
 
-num_classes = len(set(y))
+num_classes = len(classes)
 model = SimpleClassifier(vector_size, num_classes)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -85,4 +95,4 @@ for epoch in range(epochs):
 
 # ----- Zapisz model -----
 torch.save(model.state_dict(), "model.pth")
-print("Model saved to model.pth")
+print("Model and label2idx saved!")

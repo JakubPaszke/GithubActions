@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from gensim.models import KeyedVectors
+import pickle
 
 # ----- Wczytaj dane -----
 test = pd.read_csv('dev-0/in.tsv', sep='\t', header=None, names=['text'])
@@ -29,6 +30,14 @@ def text_to_vec(text, model, vector_size):
 # ----- Przygotuj dane -----
 X_test = np.vstack([text_to_vec(t, w2v_model, vector_size) for t in test['text']])
 
+# ----- Wczytaj mapping etykiet -----
+with open("label2idx.pkl", "rb") as f:
+    class_to_idx = pickle.load(f)
+idx_to_class = {v: k for k, v in class_to_idx.items()}
+
+# Zamień test labels na liczby
+y_true = np.array([class_to_idx[label] for label in test_labels], dtype=np.int64)
+
 # ----- Klasa modelu -----
 class SimpleClassifier(nn.Module):
     def __init__(self, input_size, num_classes):
@@ -37,7 +46,7 @@ class SimpleClassifier(nn.Module):
     def forward(self, x):
         return self.fc(x)
 
-num_classes = len(set(test_labels))  # UWAGA: musi być zgodne z train.py
+num_classes = len(class_to_idx)
 model = SimpleClassifier(vector_size, num_classes)
 model.load_state_dict(torch.load("model.pth"))
 model.eval()
@@ -48,5 +57,9 @@ with torch.no_grad():
     preds = torch.argmax(outputs, dim=1).numpy()
 
 # ----- Ewaluacja -----
-accuracy = np.mean(preds == test_labels)
+accuracy = np.mean(preds == y_true)
 print(f"Accuracy on dev-0: {accuracy:.4f}")
+
+# (opcjonalnie) Wyświetl przykładowe predykcje
+for i in range(3):
+    print(f"True: {idx_to_class[y_true[i]]}, Pred: {idx_to_class[preds[i]]}")
