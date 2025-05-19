@@ -70,6 +70,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: trained-model
+      
+      - name: Clone sport-text-classification repo
+        run: |
+          git clone https://git.wmi.amu.edu.pl/kubapok/sport-text-classification-ball-ISI-public.git
+          mv sport-text-classification-ball-ISI-public/* .
+          rm -rf sport-text-classification-ball-ISI-public
 
       - name: Evaluate model
         run: |
